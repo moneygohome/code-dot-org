@@ -1,5 +1,6 @@
 require_relative '../../deployment'
 require 'cdo/rake_utils'
+require 'cdo/circle_utils'
 
 namespace :install do
   desc 'Install Git hooks.'
@@ -40,7 +41,13 @@ namespace :install do
       Dir.chdir(dashboard_dir) do
         RakeUtils.bundle_install
         puts CDO.dashboard_db_writer
-        if ENV['CI']
+        if CircleUtils.circle?
+          if CircleUtils.unit_test_container?
+            RakeUtils.rake 'db:create db:test:prepare'
+          else
+            RakeUtils.rake 'db:setup_or_migrate'
+          end
+        elsif ENV['CI']
           # Prepare for dashboard unit tests to run. We can't seed UI test data
           # yet because doing so would break unit tests.
           RakeUtils.rake 'db:create db:test:prepare'
