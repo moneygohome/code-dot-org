@@ -2005,9 +2005,9 @@ class User < ActiveRecord::Base
   end
 
   def depends_on_teacher_for_login?
-    # Student depends on teacher for login if they do not have a personal login
+    # Student depends on teacher for login if they have a teacher managed account
     # and only have one teacher.
-    student? && can_create_personal_login? && teachers.uniq.one?
+    student? && teacher_managed_account? && teachers.uniq.one?
   end
 
   private
