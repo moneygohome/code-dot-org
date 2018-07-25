@@ -94,23 +94,22 @@
   %div#submit-update= f.submit t('user.update'), class: 'btn btn-primary'
 
 - if current_user.migrated?
-  - if current_user.can_edit_password? && current_user.encrypted_password.blank?
+  - if current_user.can_add_password?
     -# Mount point for React AddPasswordForm component.
     %div#add-password-fields
 
     -# Hidden form used to asynchronously submit a new password to Rails with the
     -# appropriate authenticity tokens.  See AddPasswordForm.jsx for more details.
     -# Currently hidden behind .migrated? flag until all users have been migrated.
-    - if current_user.can_edit_password? && current_user.encrypted_password.blank?
-      = form_for(resource,
-          as: resource_name,
-          url: '/users',
-          remote: true,
-          html: { id: 'add-password-form' },
-          namespace: 'add-password',
-        ) do |f|
-        = f.hidden_field :password
-        = f.hidden_field :password_confirmation
+    = form_for(resource,
+        as: resource_name,
+        url: '/users',
+        remote: true,
+        html: { id: 'add-password-form' },
+        namespace: 'add-password',
+      ) do |f|
+      = f.hidden_field :password
+      = f.hidden_field :password_confirmation
 
   -# Mount point for React ManageLinkedAccounts component.
   %div#manage-linked-accounts

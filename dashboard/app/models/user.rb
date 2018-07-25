@@ -739,6 +739,14 @@ class User < ActiveRecord::Base
     user.gender = normalize_gender auth.info.gender
   end
 
+  def oauth_only?
+    if migrated?
+      authentication_options.all?(&:oauth?)
+    else
+      OAUTH_PROVIDERS.include? provider
+    end
+  end
+
   def oauth?
     if migrated?
       authentication_options.any?(&:oauth?)
@@ -1762,6 +1770,14 @@ class User < ActiveRecord::Base
     end
   end
 
+  # Controls which users can see the 'Add a password' form.
+  # Users that can edit their password and currently have no password should see
+  # the form. Users that can create a personal password login will see the 'Create a
+  # personal password login' form instead.
+  def can_add_password?
+    can_edit_password? && encrypted_password.blank? && !can_create_personal_login?
+  end
+
   # Whether the current user has permission to change their own account type
   # from the account edit page.
   def can_change_own_user_type?
@@ -1786,11 +1802,10 @@ class User < ActiveRecord::Base
     sections_as_student.empty?
   end
 
-  # Users who might otherwise have orphaned accounts should have the option
-  # to create personal logins (using e-mail/password or oauth) so they can
-  # continue to use our site without losing progress.
+  # Users who might otherwise have orphaned accounts or only use oauth should have the option
+  # to create a personal password login so they can login with an email/password.
   def can_create_personal_login?
-    teacher_managed_account? # once parent e-mail is added, we should check for it here
+    teacher_managed_account? || oauth_only? # once parent e-mail is added, we should check for it here
   end
 
   def teacher_managed_account?
