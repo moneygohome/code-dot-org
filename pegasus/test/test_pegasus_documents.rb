@@ -12,6 +12,7 @@ require 'zlib'
 # Runs integration tests against the full Pegasus document repository.
 class PegasusTest < Minitest::Test
   include Rack::Test::Methods
+  include CaptureQueries
 
   def app
     @app ||= Documents.new
@@ -115,6 +116,7 @@ class PegasusTest < Minitest::Test
       header 'host', site
       begin
         get(uri)
+        output = capture_queries(DB) {get(uri)}
       rescue Exception => e
         # Filter backtrace from current location.
         index = e.backtrace.index(caller(2..2).first)
@@ -139,12 +141,15 @@ class PegasusTest < Minitest::Test
         exceptions = STATUS_EXCEPTIONS[status] || []
         next "[#{url}] returned invalid status #{status}" unless exceptions.include?(url)
       end
-      {url => response.body}
+      {url => {body: response.body, queries: output}}
     end
     errors, pages = results.partition {|result| result.is_a?(String)}
     assert_equal 0, errors.length, "Page rendering errors:\n#{errors.join("\n\n")}"
 
     pages = pages.reduce(:merge).sort.to_h
+    query_pages = pages.reject {|_, p| p[:queries].empty?}.transform_values {|p| p[:queries]}
+    assert_equal 0, query_pages.length, "Pages with un-cached DB queries:\n\n#{query_pages.map {|p| p.join(":\n")}.join("\n\n")}"
+
     routes_file = cache_dir('pegasus_routes.yml.gz')
     if File.exist?(routes_file)
       old_routes = YAML.load(Zlib::GzipReader.new(File.open(routes_file)).read)
@@ -156,7 +161,7 @@ class PegasusTest < Minitest::Test
           diff_output = Tempfile.open('a') do |a|
             Tempfile.open('b') do |b|
               File.write(a, old_routes[diff])
-              File.write(b, pages[diff])
+              File.write(b, pages[diff][:body])
               `diff -wB #{a.path} #{b.path}`
             end
           end
