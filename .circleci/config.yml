@@ -137,7 +137,7 @@ jobs:
             mispipe "bundle exec rake build --trace" "ts '[%Y-%m-%d %H:%M:%S]'"
           environment:
             RAKE_VERBOSE: true
-          no_output_timeout: 20m
+          no_output_timeout: 30m
 
       # as recommended: https://circleci.com/docs/2.0/yarn/
       - save_cache:
